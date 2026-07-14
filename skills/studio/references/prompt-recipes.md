@@ -94,4 +94,3 @@ Lighting/mood: even subject lighting without cast or contact shadow
 Constraints: uniform #00ff00 background; crisp separated edges; do not use #00ff00 in subject
 Avoid: gradient, texture, floor plane, reflection, shadow, watermark, text
 ```
-
