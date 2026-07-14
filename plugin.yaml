@@ -1,0 +1,9 @@
+name: advanced-imagegen
+version: 0.2.0
+description: "Controlled image generation with automated QA, bounded retries, persistence, and delivery gates."
+author: "Hermes User"
+kind: standalone
+provides_tools:
+  - advanced_image_generate
+provides_hooks:
+  - pre_tool_call
