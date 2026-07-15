@@ -1,6 +1,6 @@
 ---
 name: prompt-seedream-5-pro
-description: Refine and confirm provider-neutral Seedream 5 Pro prompts for text-to-image, image editing, reference-image composition, multi-image input, coherent image sets, exact text, diagrams, and prototype rendering. Use after the advanced image wizard selects any supplier's Seedream 5 Pro model.
+description: Refine and confirm provider-neutral Seedream 5 Pro prompts for production-grade dense information graphics, spatially annotated or layered edits, realistic photography and portraits, multilingual layouts, text-to-image, references, and coherent image sets. Use after the advanced image wizard selects any supplier's Seedream 5 Pro model.
 ---
 
 # Seedream 5 Pro Prompt
@@ -8,10 +8,10 @@ description: Refine and confirm provider-neutral Seedream 5 Pro prompts for text
 Apply one semantic prompt policy across suppliers. Supplier choice changes transport,
 credentials, quotas, and errors, not the model-family prompt method.
 
-The official Seedream 4.0–5.0 prompt guide currently names Seedream 5.0 Lite, 4.5, and
-4.0, not a separate Pro variant. Apply its verified shared Seedream guidance here; do not
-invent Pro-only syntax, limits, or capabilities. Check supplier metadata before promising a
-feature.
+Use the shared Seedream prompt grammar, then optimize for Pro's officially highlighted strengths:
+high-density information, interactive precise editing, realistic imagery and portraits, and
+native multilingual creation. Do not invent syntax, limits, or output modes. Check supplier
+metadata before promising a feature.
 
 Do not call generation tools. Produce a confirmed prompt packet for the wizard.
 
@@ -27,6 +27,44 @@ For visible text, put the exact copy in double quotes and say whether any other 
 For knowledge-dense graphics, use correct domain terms and specify the visualization type,
 information hierarchy, layout, and visual style.
 
+## Exploit Pro strengths deliberately
+
+### Organize dense professional content
+
+Use Pro when the output must hold many coordinated facts, panels, labels, or UI modules. Convert
+the request into a spatial content plan rather than a paragraph:
+
+1. define audience, application, canvas, and reading order;
+2. divide the canvas into named regions, grids, panels, or layers;
+3. assign exact content and priority to every region;
+4. define typography hierarchy, connectors, legends, units, and color semantics;
+5. list facts or copy verbatim and identify anything that still requires verification.
+
+For storyboards, technical drawings, educational posters, dashboards, and complex UI, specify the
+exact panel count and the content of each panel. High density does not excuse illegible type,
+invented facts, or missing hierarchy.
+
+### Treat annotations as an edit interface
+
+Interpret boxes, arrows, handwriting, masks, and doodles as spatial instructions. Map every marker
+to its target, operation, replacement content, and removal policy. When the user requests layer
+separation, define semantic layers and their ordering, but verify that the selected supplier can
+actually return layered output; otherwise generate a flattened image that preserves the intended
+layer relationships.
+
+### Control realism and portrait finish
+
+For photography, describe physically consistent key, fill, rim, reflections, shadows, depth, and
+material response. For portraits, preserve identity and natural skin, hair, anatomy, and asymmetry.
+State retouching limits so “beautify” does not become plastic skin, face drift, or body distortion.
+
+### Localize multilingual layouts
+
+List each language and exact string separately. Specify reading direction, alignment, regional
+typography, line breaks, and which names, numbers, or brands must not be translated. For translation
+edits, lock imagery, icons, colors, and module structure while replacing only the requested text
+and adapting layout direction where necessary.
+
 ## Adapt by task type
 
 ### Edit one image
@@ -40,10 +78,9 @@ Keep unchanged: the person, pose, facial features, hands, table layout, camera,
 crop, perspective, lighting, existing logo, and every unmentioned region.
 ```
 
-When the source uses arrows, boxes, or scribbles, explain what each marker identifies and whether
-the marker itself must disappear. For sketches, floor plans, and UI wireframes, follow source
-annotations and lock the existing layout, positions, and structure unless the user requests a
-change.
+When the source uses arrows, boxes, or scribbles, follow the annotation-interface rules above. For
+sketches, floor plans, and UI wireframes, follow source annotations and lock the existing layout,
+positions, and structure unless the user requests a change.
 
 ### Use reference or multiple input images
 
@@ -85,4 +122,7 @@ If the request is already concrete, summarize assumptions and move to confirmati
 
 Ask the user to approve or revise the packet. Never interpret silence as confirmation.
 
-Source: [Volcengine Seedream 4.0–5.0 Prompt Guide](https://docs.volcengine.com/docs/82379/1829186?lang=zh).
+Sources:
+
+- [ByteDance Seed: Seedream 5.0 Pro](https://seed.bytedance.com/zh/seedream5_0_pro)
+- [Volcengine Seedream 4.0–5.0 Prompt Guide](https://docs.volcengine.com/docs/82379/1829186?lang=zh)

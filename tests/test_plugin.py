@@ -230,7 +230,14 @@ def test_seedream_skills_encode_official_prompt_patterns():
         assert "arrows, boxes, or scribbles" in content
         assert "exact count" in content
         assert "Never interpret silence as confirmation" in content
-    assert "not a separate Pro variant" in pro
+    assert "high-density information" in pro
+    assert "semantic layers" in pro
+    assert "physically consistent" in pro
+    assert "reading direction" in pro
+    assert "real-time retrieval" in lite
+    assert "nine-subject grid" in lite
+    assert "remaining room in structural stability" in lite
+    assert "Do not assume that “Lite” means faster or cheaper" in lite
     assert "Image 2 supplies the character identity only" in lite
 
 

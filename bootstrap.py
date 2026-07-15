@@ -24,8 +24,8 @@ PLUGIN_DIR = Path(__file__).resolve().parent
 _SKILL_DESCRIPTIONS = {
     "studio": "Plan, generate, edit, and verify production images.",
     "prompt-generic-image": "Turn a general image request into a confirmed production prompt.",
-    "prompt-seedream-5-lite": "Optimize a provider-neutral prompt for the Seedream 5 Lite model family.",
-    "prompt-seedream-5-pro": "Optimize a provider-neutral prompt for the Seedream 5 Pro model family.",
+    "prompt-seedream-5-lite": "Optimize reasoning-, retrieval-, and knowledge-aware Seedream 5 Lite prompts.",
+    "prompt-seedream-5-pro": "Optimize production-grade dense, precise, realistic, and multilingual Seedream 5 Pro prompts.",
 }
 
 

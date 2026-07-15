@@ -1,6 +1,6 @@
 ---
 name: prompt-seedream-5-lite
-description: Refine and confirm provider-neutral Seedream 5 Lite prompts for text-to-image, image editing, reference-image composition, multi-image input, coherent image sets, exact text, diagrams, and prototype rendering. Use after the advanced image wizard selects any supplier's Seedream 5 Lite model.
+description: Refine and confirm provider-neutral Seedream 5 Lite prompts for reasoning-led creation, current-information visuals with optional online search, knowledge and office graphics, style transfer, intent-aware editing, multi-subject scenes, references, and coherent image sets. Use after the advanced image wizard selects any supplier's Seedream 5 Lite model.
 ---
 
 # Seedream 5 Lite Prompt
@@ -8,8 +8,10 @@ description: Refine and confirm provider-neutral Seedream 5 Lite prompts for tex
 Apply the same semantic prompt method across suppliers. Supplier choice affects transport,
 credentials, quotas, and errors, not how the scene is described.
 
-Follow the official Seedream 4.0–5.0 prompt guide. Do not call generation tools; prepare a
-confirmed prompt packet for the wizard.
+Follow the official Seedream 4.0–5.0 prompt guide, then optimize for Lite's officially highlighted
+strengths: deep multimodal reasoning, world knowledge, optional real-time retrieval, information
+visualization, style transfer, intent-aware editing, and complex multi-subject instructions. Do not
+call generation tools; prepare a confirmed prompt packet for the wizard.
 
 ## Start with the minimum complete scene
 
@@ -27,6 +29,50 @@ the primary instruction.
 Put every exact visible string in double quotes and state whether additional text is forbidden.
 For knowledge-dense graphics, use correct professional terms and define the visualization type,
 information hierarchy, layout, and style.
+
+## Exploit Lite strengths deliberately
+
+### Preserve intent instead of over-writing it
+
+Lite is officially positioned to infer intent from concise or ambiguous instructions. Start from
+the user's goal and make assumptions explicit instead of burying it under ornamental prompt prose.
+Clarify ambiguity that would materially change the output; otherwise propose a compact draft and
+let the user approve the inferred direction.
+
+### Separate current facts from visual instructions
+
+For weather, prices, rankings, recent events, or other time-sensitive content, ask for the target
+date, locale, unit, and freshness requirement. Put the exact facts or queries in a distinct data
+block and the layout/style in a visual block. Request the supplier's online-search tool only when
+the selected model entry supports it. Never invent current values, and do not imply that retrieval
+is active merely because the model family supports it.
+
+### Encode reasoning and knowledge tasks
+
+For educational, scientific, office, or information graphics, state the governing facts,
+relationships, formulas, spatial logic, labels, and expected visualization. Ask the model to render
+the correct result, not to display hidden reasoning. Mark every factual assertion that still needs
+external verification.
+
+### Use references for style and transformation logic
+
+For style transfer, identify the visual attributes to extract—palette, brushwork, texture, light,
+or graphic language—and prohibit content transfer. For transformation-by-example, describe the
+change from Image 1 to Image 2, apply the same change to Image 3, and lock all unrelated content.
+
+### Bound complex multi-subject scenes
+
+Assign each subject a position and unique attributes such as count, letter, time, material, and
+color. The official showcase demonstrates a nine-subject grid, but that is evidence of a use case,
+not a hard API limit. Verify supplier limits and add per-subject acceptance checks.
+
+## Respect Lite's quality boundary
+
+ByteDance describes Lite as a smaller model with remaining room in structural stability, realism,
+and aesthetics. Do not assume that “Lite” means faster or cheaper; those are supplier properties.
+For high-stakes photorealism, portrait finish, dense professional layouts, multilingual production,
+or complex annotation-driven edits, recommend Pro when available. If Lite remains selected, tighten
+structure, identity, realism, text, and layout acceptance criteria and plan targeted retries.
 
 ## Select the task pattern
 
@@ -90,4 +136,8 @@ If the request is already concrete, summarize assumptions and proceed to confirm
 
 Ask the user to approve or revise the packet. Never interpret silence as confirmation.
 
-Source: [Volcengine Seedream 4.0–5.0 Prompt Guide](https://docs.volcengine.com/docs/82379/1829186?lang=zh).
+Sources:
+
+- [ByteDance Seed: Seedream 5.0 Lite](https://seed.bytedance.com/zh/seedream5_0_lite)
+- [ByteDance Seed: Seedream 5.0 Lite release](https://seed.bytedance.com/zh/blog/%E6%80%9D%E8%80%83-%E6%9B%B4%E6%B7%B1-%E7%94%9F%E6%88%90%E6%9B%B4%E5%87%86-seedream-5-0-lite-%E5%8F%91%E5%B8%83)
+- [Volcengine Seedream 4.0–5.0 Prompt Guide](https://docs.volcengine.com/docs/82379/1829186?lang=zh)

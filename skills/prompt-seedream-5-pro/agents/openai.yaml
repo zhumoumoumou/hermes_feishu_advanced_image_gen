@@ -1,4 +1,4 @@
 interface:
   display_name: "Seedream 5 Pro Prompt"
-  short_description: "Optimize prompts for Seedream 5 Pro"
-  default_prompt: "Use $prompt-seedream-5-pro to refine my request into a confirmed Seedream 5 Pro prompt."
+  short_description: "Build production-grade Seedream 5 Pro prompts"
+  default_prompt: "Use $prompt-seedream-5-pro to turn my production image request into a capability-aware confirmed prompt."

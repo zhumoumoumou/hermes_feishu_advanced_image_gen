@@ -36,10 +36,18 @@ hermes plugins enable advanced-imagegen --no-allow-tool-override
 `advanced-imagegen:prompt-seedream-5-pro`，`seedream-5-lite` 则映射到
 `advanced-imagegen:prompt-seedream-5-lite`。
 
-Seedream 5 Lite Prompt Skill 按[火山引擎 Seedream 4.0–5.0 提示词指南](https://docs.volcengine.com/docs/82379/1829186?lang=zh)
-实现文生图、编辑、参考图、多图输入、组图输出、文字渲染、信息图和原型图提示方法。
-该页面当前明确列出 5.0 Lite、4.5 和 4.0，并未单列 5 Pro；因此 Pro Skill 只复用
-官方已验证的 Seedream 系列通用规则，不虚构 Pro 专属语法、限额或能力。
+两个 Skill 共享[火山引擎 Seedream 提示词指南](https://docs.volcengine.com/docs/82379/1829186?lang=zh)
+中的基础语法，但会依据官方能力定位采取不同策略：
+
+| 模型 | 优先场景 | Prompt Skill 的差异化处理 |
+| --- | --- | --- |
+| Seedream 5 Pro | 高密度专业信息、空间批注与图层式编辑、写实影像/人像、多语种成品 | 强化分区与信息层级、标记到操作的映射、物理光影与自然修图、多语种排版 |
+| Seedream 5 Lite | 深度思考、实时资讯、知识/办公图、风格迁移、意图式编辑、多主体场景 | 分离事实与视觉指令、显式检索开关、编码知识关系、约束参考图迁移和逐主体属性 |
+
+官方将 Lite 描述为较小模型，并指出其结构稳定性、真实感和美感仍有提升空间；Skill
+会在高要求生产场景建议 Pro，或为 Lite 加严验收标准，但不会从名称推断供应商速度和价格。
+能力依据：[Seedream 5.0 Pro](https://seed.bytedance.com/zh/seedream5_0_pro)、
+[Seedream 5.0 Lite](https://seed.bytedance.com/zh/seedream5_0_lite)。
 
 ## 供应商配置
 
@@ -68,8 +76,8 @@ adapter，而不是不断扩张通用映射。
 ## 目录
 
 - `skills/studio/SKILL.md`：高级生图与编辑工作流。
-- `skills/prompt-seedream-5-lite/SKILL.md`：Seedream 5 Lite 官方方法 Prompt Skill。
-- `skills/prompt-seedream-5-pro/SKILL.md`：Seedream 5 Pro 的共享家族方法 Prompt Skill。
+- `skills/prompt-seedream-5-lite/SKILL.md`：Seedream 5 Lite 推理、检索和知识型 Prompt Skill。
+- `skills/prompt-seedream-5-pro/SKILL.md`：Seedream 5 Pro 生产级复杂内容 Prompt Skill。
 - `orchestrator.py`：生成、质检、重试、持久化与交付状态机。
 - `runtime/catalog.py`：profile 本地供应商与模型目录。
 - `runtime/providers.py`：Hermes Native 与声明式 HTTP/JSON 适配器。

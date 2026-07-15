@@ -1,5 +1,5 @@
 name: advanced-imagegen
-version: 0.3.1
+version: 0.3.2
 description: "Multi-provider image generation with model prompt skills, guided confirmation, rate controls, QA, and delivery gates."
 author: "zhumoumoumou"
 kind: standalone
