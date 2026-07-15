@@ -89,7 +89,12 @@ def test_registers_skill_tool_and_bypass_gate():
     plugin.register(ctx)
 
     skills = {call[0][0]: call[0][1] for call in ctx.skill_calls}
-    assert set(skills) == {"studio", "prompt-generic-image", "prompt-seedream-5-pro"}
+    assert set(skills) == {
+        "studio",
+        "prompt-generic-image",
+        "prompt-seedream-5-lite",
+        "prompt-seedream-5-pro",
+    }
     assert skills["studio"] == PLUGIN_DIR / "skills" / "studio" / "SKILL.md"
     tools = {call["name"]: call for call in ctx.tool_calls}
     assert set(tools) == {
@@ -155,6 +160,13 @@ providers:
         prompt_skill: prompt-seedream-5-pro
         modalities: [text, image, reference]
         max_reference_images: 4
+      seedream-5-lite:
+        display_name: Seedream 5 Lite
+        family: seedream-5-lite
+        upstream_model: seedream-lite-upstream
+        prompt_skill: prompt-seedream-5-lite
+        modalities: [text, image, reference]
+        max_reference_images: 4
   bytedance:
     display_name: ByteDance
     adapter: http-json
@@ -166,6 +178,12 @@ providers:
         family: seedream-5-pro
         upstream_model: seedream-other-upstream
         prompt_skill: prompt-seedream-5-pro
+        modalities: [text, image, reference]
+        max_reference_images: 4
+      seedream-5-lite:
+        family: seedream-5-lite
+        upstream_model: seedream-lite-other-upstream
+        prompt_skill: prompt-seedream-5-lite
         modalities: [text, image, reference]
         max_reference_images: 4
 """
@@ -193,9 +211,27 @@ def test_catalog_keeps_model_skill_provider_neutral(tmp_path, monkeypatch):
     bytedance = catalog.providers["bytedance"].models["seedream-5-pro"]
     assert atlas.family == bytedance.family == "seedream-5-pro"
     assert atlas.prompt_skill == bytedance.prompt_skill == "prompt-seedream-5-pro"
+    atlas_lite = catalog.providers["atlascloud"].models["seedream-5-lite"]
+    bytedance_lite = catalog.providers["bytedance"].models["seedream-5-lite"]
+    assert atlas_lite.family == bytedance_lite.family == "seedream-5-lite"
+    assert atlas_lite.prompt_skill == bytedance_lite.prompt_skill == "prompt-seedream-5-lite"
     public = catalog.public_catalog(include_disabled=True)
     assert public["defaults"] == {"provider": "atlascloud", "model": "seedream-5-pro"}
     assert next(p for p in public["providers"] if p["id"] == "atlascloud")["configured"] is True
+
+
+def test_seedream_skills_encode_official_prompt_patterns():
+    pro = (PLUGIN_DIR / "skills" / "prompt-seedream-5-pro" / "SKILL.md").read_text(encoding="utf-8")
+    lite = (PLUGIN_DIR / "skills" / "prompt-seedream-5-lite" / "SKILL.md").read_text(encoding="utf-8")
+
+    for content in (pro, lite):
+        assert "subject + action + environment" in content
+        assert "double quotes" in content
+        assert "arrows, boxes, or scribbles" in content
+        assert "exact count" in content
+        assert "Never interpret silence as confirmation" in content
+    assert "not a separate Pro variant" in pro
+    assert "Image 2 supplies the character identity only" in lite
 
 
 def test_invalid_enabled_placeholder_falls_back_to_native(tmp_path):

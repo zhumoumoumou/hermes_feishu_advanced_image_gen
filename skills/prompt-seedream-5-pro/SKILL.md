@@ -1,62 +1,88 @@
 ---
 name: prompt-seedream-5-pro
-description: Refine and confirm prompts for the provider-neutral Seedream 5 Pro model family. Use when the advanced image wizard selects any supplier's Seedream 5.0 Pro entry for text-to-image, image-to-image, multi-reference composition, identity/product preservation, exact text, or deliberate variants.
+description: Refine and confirm provider-neutral Seedream 5 Pro prompts for text-to-image, image editing, reference-image composition, multi-image input, coherent image sets, exact text, diagrams, and prototype rendering. Use after the advanced image wizard selects any supplier's Seedream 5 Pro model.
 ---
 
 # Seedream 5 Pro Prompt
 
-Apply the same prompt policy regardless of supplier. Supplier choice changes transport,
-credentials, quotas, and error behavior—not the semantic prompt skill.
+Apply one semantic prompt policy across suppliers. Supplier choice changes transport,
+credentials, quotas, and errors, not the model-family prompt method.
 
-Do not call generation tools. Produce a confirmed draft for the wizard.
+The official Seedream 4.0–5.0 prompt guide currently names Seedream 5.0 Lite, 4.5, and
+4.0, not a separate Pro variant. Apply its verified shared Seedream guidance here; do not
+invent Pro-only syntax, limits, or capabilities. Check supplier metadata before promising a
+feature.
 
-## Establish the instruction hierarchy
+Do not call generation tools. Produce a confirmed prompt packet for the wizard.
 
-Discuss missing information in this order:
+## Build the prompt
 
-1. primary outcome and final medium;
-2. numbered input images and each image's single role;
-3. subject, action, setting, and spatial relationships;
-4. composition, camera, lighting, color, material, and finish;
-5. exact rendered text;
-6. edit invariants, hard negatives, and acceptance criteria.
+Use concise, coherent natural language. Begin with `subject + action + environment`, then add
+only useful details for application, style, color, lighting, composition, camera, material, and
+finish. Name the intended use, such as a poster, logo, product hero, infographic, or storyboard.
+Avoid disconnected keyword piles, repeated adjectives, and decorative detail that does not
+change the output.
 
-Ask one compact group of questions at a time. If the request is already concrete, summarize
-assumptions and move directly to confirmation.
+For visible text, put the exact copy in double quotes and say whether any other text is allowed.
+For knowledge-dense graphics, use correct domain terms and specify the visualization type,
+information hierarchy, layout, and visual style.
 
-## Write a coherent prompt
+## Adapt by task type
 
-Prefer clear natural-language instructions over disconnected keyword piles. Start with the
-main outcome, then describe the scene and visual treatment. Put constraints after the desired
-result so prohibitions do not obscure the objective.
+### Edit one image
 
-For reference images, use stable numbering:
-
-```text
-Image 1 is the edit target. Image 2 is identity reference only.
-Image 3 supplies composition only. Do not transfer its person, text, or branding.
-```
-
-For edits, state the change and invariants together:
+Name the target and operation explicitly: add, delete, replace, or modify. State the allowed
+change and invariants together. Avoid pronouns such as “it” when more than one object is present.
 
 ```text
-Change only: <allowed change>.
-Keep unchanged: identity, facial structure, body proportions, product geometry,
-camera, crop, perspective, logos, exact text, and every unmentioned region.
+Change only: replace the mug in Image 1 with a clear glass cup.
+Keep unchanged: the person, pose, facial features, hands, table layout, camera,
+crop, perspective, lighting, existing logo, and every unmentioned region.
 ```
 
-For text, quote it verbatim and forbid additional text. For variants, preserve the common base
-prompt and place one changed design axis in each `variant_instructions` entry.
+When the source uses arrows, boxes, or scribbles, explain what each marker identifies and whether
+the marker itself must disappear. For sketches, floor plans, and UI wireframes, follow source
+annotations and lock the existing layout, positions, and structure unless the user requests a
+change.
 
-## Confirmation output
+### Use reference or multiple input images
 
-Return a compact packet containing:
+Number every image and give it a single explicit role. Say which features to extract or preserve,
+then describe the desired output scene. Do not allow unintended identity, text, logo, or style
+transfer.
+
+```text
+Image 1 is the edit target. Preserve its composition and product geometry.
+Image 2 supplies the character identity only.
+Image 3 supplies the ink-wash style only; do not copy its person or text.
+```
+
+### Produce a coherent set
+
+Say “a series”, “a set”, or “a group of images” and specify the exact count. Define the common
+character, product, style, palette, and continuity rules, then list the content of each image.
+Use this for storyboards, comics, IP derivatives, product sets, or emoji packs.
+
+## Discuss and confirm
+
+Ask one compact group of questions at a time, in this order:
+
+1. intended outcome, application, and exact image count;
+2. numbered image roles and requested operation;
+3. subject, action, environment, and spatial relationships;
+4. style, composition, camera, light, color, and material;
+5. exact quoted text;
+6. invariants, exclusions, and measurable acceptance criteria.
+
+If the request is already concrete, summarize assumptions and move to confirmation. Return:
 
 - final prompt;
-- image-role map and invariants;
-- aspect ratio and variant instructions;
-- exact text;
-- QA profile and measurable acceptance criteria;
-- any capability assumption that must be checked against the wizard's selected model entry.
+- image-role map and edit invariants;
+- aspect ratio, image count, and variant instructions;
+- exact rendered text;
+- QA profile and acceptance criteria;
+- supplier capabilities that still require runtime verification.
 
 Ask the user to approve or revise the packet. Never interpret silence as confirmation.
+
+Source: [Volcengine Seedream 4.0–5.0 Prompt Guide](https://docs.volcengine.com/docs/82379/1829186?lang=zh).

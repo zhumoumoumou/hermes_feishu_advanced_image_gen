@@ -52,6 +52,14 @@ providers:
         prompt_skill: prompt-seedream-5-pro
         modalities: [text, image, reference]
         max_reference_images: 8
+      seedream-5-lite:
+        display_name: Seedream 5.0 Lite (AtlasCloud)
+        family: seedream-5-lite
+        upstream_model: REPLACE_WITH_ATLASCLOUD_LITE_MODEL_ID
+        prompt_skill: prompt-seedream-5-lite
+        modalities: [text, image, reference]
+        # Example only: replace with the supplier's current documented limit.
+        max_reference_images: 8
 
   bytedance:
     display_name: ByteDance
@@ -99,4 +107,12 @@ providers:
         upstream_model: REPLACE_WITH_BYTEDANCE_MODEL_ID
         prompt_skill: prompt-seedream-5-pro
         modalities: [text, image, reference]
+        max_reference_images: 8
+      seedream-5-lite:
+        display_name: Seedream 5.0 Lite (ByteDance)
+        family: seedream-5-lite
+        upstream_model: REPLACE_WITH_BYTEDANCE_LITE_MODEL_ID
+        prompt_skill: prompt-seedream-5-lite
+        modalities: [text, image, reference]
+        # Example only: replace with the supplier's current documented limit.
         max_reference_images: 8

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Seedream 5 Lite Prompt"
+  short_description: "Optimize prompts for Seedream 5 Lite"
+  default_prompt: "Use $prompt-seedream-5-lite to refine my request into a confirmed Seedream 5 Lite prompt."

@@ -33,7 +33,13 @@ hermes plugins enable advanced-imagegen --no-allow-tool-override
 
 模型目录返回 `prompt_skill`。相同模型族即使来自不同供应商，也可引用同一个 Skill；
 例如 AtlasCloud 与 ByteDance 的 `seedream-5-pro` 都映射到
-`advanced-imagegen:prompt-seedream-5-pro`。
+`advanced-imagegen:prompt-seedream-5-pro`，`seedream-5-lite` 则映射到
+`advanced-imagegen:prompt-seedream-5-lite`。
+
+Seedream 5 Lite Prompt Skill 按[火山引擎 Seedream 4.0–5.0 提示词指南](https://docs.volcengine.com/docs/82379/1829186?lang=zh)
+实现文生图、编辑、参考图、多图输入、组图输出、文字渲染、信息图和原型图提示方法。
+该页面当前明确列出 5.0 Lite、4.5 和 4.0，并未单列 5 Pro；因此 Pro Skill 只复用
+官方已验证的 Seedream 系列通用规则，不虚构 Pro 专属语法、限额或能力。
 
 ## 供应商配置
 
@@ -62,6 +68,8 @@ adapter，而不是不断扩张通用映射。
 ## 目录
 
 - `skills/studio/SKILL.md`：高级生图与编辑工作流。
+- `skills/prompt-seedream-5-lite/SKILL.md`：Seedream 5 Lite 官方方法 Prompt Skill。
+- `skills/prompt-seedream-5-pro/SKILL.md`：Seedream 5 Pro 的共享家族方法 Prompt Skill。
 - `orchestrator.py`：生成、质检、重试、持久化与交付状态机。
 - `runtime/catalog.py`：profile 本地供应商与模型目录。
 - `runtime/providers.py`：Hermes Native 与声明式 HTTP/JSON 适配器。
