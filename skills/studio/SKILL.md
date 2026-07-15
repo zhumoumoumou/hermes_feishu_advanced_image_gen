@@ -1,64 +1,50 @@
 ---
 name: studio
-description: Plan, generate, edit, and verify production images.
-license: MIT
-metadata:
-  hermes:
-    tags: [image-generation, image-editing, creative, production]
-    category: creative
+description: Plan and deliver production raster images through the advanced image wizard. Use for photos, illustrations, concepts, product or marketing images, image editing, reference composition, deliberate variants, transparent assets, exact text, or any request requiring supplier/model selection and acceptance checks; do not use for deterministic SVG, HTML/CSS, Canvas, or vector-source edits.
 ---
 
 # Image Studio Skill
 
-将模糊的视觉需求转成可执行的生图规格，并统一调用 `advanced_image_generate`
-编排生成、机器文件检查、视觉验收、定向重试、持久化和交付状态。编排器内部复用
-Hermes 原生 `image_generate` provider 链，不实现新的生图后端，也不替用户切换模型。
-
-## When to Use
-
-- 生成照片、插画、概念图、产品图、营销主视觉、封面或游戏资产。
-- 用一张主图和若干参考图做局部编辑、风格迁移、合成或身份保持。
-- 为同一需求制作多版构图、风格或色彩变体。
-- 制作简单不透明主体的透明 PNG/WebP。
-- 需要把结果放入当前项目并进行交付前验收。
-
-以下情况不要使用：已有 SVG、HTML/CSS、Canvas 或其他可编辑源文件，且任务只是
-确定性的小改动；简单图标、流程图或布局用代码原生实现更可靠；用户明确要求向量
-源文件而不是位图。
+将模糊的视觉需求转成可执行的生图规格，通过 `advanced_image_wizard` 选择供应商与
+模型、路由模型级 Prompt Skill、确认请求，再编排生成、验收、重试、持久化和交付。
 
 ## Prerequisites
 
-- Hermes 已启用 `image_gen` toolset，且 `advanced_image_generate` 可用。
-- 用户已通过 `hermes tools` 配置 Image Generation provider 和模型。
-- 编辑能力由当前 provider/model 的动态工具说明决定；如果只支持文生图，不得传
-  `image_url` 或 `reference_image_urls`。
+- Hermes 已启用 `image_gen` toolset，且 `advanced_image_wizard`、
+  `advanced_image_catalog` 与 `advanced_image_generate` 可用。
+- 使用 `hermes-native` 时，用户已通过 `hermes tools` 配置 Image Generation provider
+  和模型；外部供应商使用 profile 本地目录配置。
+- 编辑能力以向导选中模型返回的 `modalities` 和 `max_reference_images` 为准。
 - 透明背景后处理和文件质检需要 Pillow。若缺失，告知用户执行
   `python -m pip install pillow`，不要伪称后处理成功。
 
 ## Routing and Skill Use
 
 - 强制路由由插件 hook 和工具描述负责，不依赖本 Skill 是否已加载。
-- 简单文生图可以直接调用 `advanced_image_generate`，无需先加载本 Skill。
+- 用户发起高级生图请求时默认调用 `advanced_image_wizard(action="start")`。
 - 参考图编辑、身份保持、精确文字、透明背景、多变体、严格验收或项目资产交付等
   复杂任务，应按需加载 `advanced-imagegen:studio`，使用下面的规格与检查规则。
 - 不要要求用户在自然语言请求中附加 `skill_view` 指令。
-- 若误调用原生 `image_generate`，门禁会拒绝并要求改用编排工具；收到拒绝后直接
-  改用 `advanced_image_generate`，不要重复尝试原生工具。
+- 若误调用原生 `image_generate`，门禁会拒绝并要求改用向导；不要重复尝试原生工具。
 
 ## How to Run
 
-1. 读取用户需求和所有输入图片，判断是新生成还是编辑。
-2. 只补齐会明显改善结果的细节；缺失信息不构成阻塞时直接做合理假设。
-3. 按下面的规格模板整理 prompt。
-4. 调用一次 `advanced_image_generate`，用 `variants` 表示多个独立成品。
-5. 编排器自动做机器检查和视觉验收；失败时按明确问题做有界定向重试。
+1. 调用向导 `start`，把可用供应商与模型展示给用户。
+2. 用户选择后调用 `select`，读取返回的 `prompt_skill` 并按需 `skill_view`。
+3. 按模型 Skill 与用户讨论 Prompt、输入图角色、变体和验收条件。
+4. 调用 `draft`，向用户完整展示向导返回的确认摘要。
+5. 只有用户明确同意后，调用 `confirm(confirmed=true)`；不要把沉默当确认。
 6. 根据 manifest 交付 `accepted` 文件；`rejected` 不得冒充成品，`needs_review`
-   必须请用户确认。
+   必须再次请用户确认。
 
 ## Quick Reference
 
-| 目标 | `advanced_image_generate` 输入 | 关键规则 |
+| 目标 | 向导/执行输入 | 关键规则 |
 |---|---|---|
+| 开始 | `advanced_image_wizard(action="start")` | 先选择供应商和模型 |
+| 选择 | `action="select", provider, model` | 加载返回的模型 Prompt Skill |
+| 草稿 | `action="draft", prompt, ...` | 只返回确认摘要，不生图 |
+| 执行 | `action="confirm", confirmed=true` | 必须有用户明确确认 |
 | 文生图 | `prompt`, `aspect_ratio` | 不传任何图片参数 |
 | 编辑主图 | 加 `image_url` | 当前模型必须支持 image modality |
 | 多参考图 | 加 `reference_image_urls` | 标注每张图的角色并遵守数量上限 |
@@ -140,7 +126,7 @@ perspective, product geometry, logos, text, and all unmentioned regions.
 
 ### 4. Generate or edit
 
-- 文生图：调用 `advanced_image_generate(prompt=..., aspect_ratio=...)`。
+- 交互请求通过向导 `confirm` 执行；`advanced_image_generate` 只用于已经确认的执行请求。
 - 编辑：将主图放在 `image_url`，补充参考图放在 `reference_image_urls`。
 - 不要在调用中编造 provider/model 参数；这些由 Hermes 配置决定。
 - 不要假设编辑一定可用。动态说明为 text-only 时，向用户说明限制并提供重新生成方案。

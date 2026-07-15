@@ -81,7 +81,8 @@ def remove_key(
 
     rgba = source.convert("RGBA")
     output: list[tuple[int, int, int, int]] = []
-    for red, green, blue, original_alpha in rgba.getdata():
+    pixels = rgba.get_flattened_data() if hasattr(rgba, "get_flattened_data") else rgba.getdata()
+    for red, green, blue, original_alpha in pixels:
         rgb = (red, green, blue)
         distance = color_distance(rgb, key)
         if soft_matte:

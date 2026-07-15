@@ -15,14 +15,22 @@ from typing import Any
 ADVANCED_IMAGE_GENERATE_SCHEMA = {
     "name": "advanced_image_generate",
     "description": (
-        "Required image-generation entry point. Orchestrates Hermes image generation, "
-        "file checks, visual QA, targeted retries, safe persistence, and delivery status. "
-        "Use this instead of image_generate for every generation or image-editing request."
+        "Execute an already-confirmed image request against a selected supplier/model, then run "
+        "file checks, visual QA, targeted retries, safe persistence, and delivery controls. "
+        "For interactive user requests, start advanced_image_wizard first."
     ),
     "parameters": {
         "type": "object",
         "properties": {
             "prompt": {"type": "string", "description": "Complete generation/edit prompt."},
+            "provider": {
+                "type": "string",
+                "description": "Supplier id from advanced_image_catalog; defaults to hermes-native.",
+            },
+            "model": {
+                "type": "string",
+                "description": "Model id under the selected supplier; defaults to that supplier's configured model.",
+            },
             "aspect_ratio": {
                 "type": "string",
                 "enum": ["landscape", "portrait", "square"],
@@ -82,6 +90,7 @@ ADVANCED_IMAGE_GENERATE_SCHEMA = {
                 "default": "#00ff00",
                 "description": "Flat key color used by transparent QA/profile post-processing.",
             },
+            "wizard_id": {"type": "string", "description": "Wizard audit id when invoked after confirmation."},
         },
         "required": ["prompt"],
     },
@@ -117,15 +126,21 @@ def block_raw_image_generate(tool_name: str = "", **_: Any) -> dict[str, str] | 
         "action": "block",
         "message": (
             "Direct image_generate calls are disabled by advanced-imagegen. "
-            "Call advanced_image_generate so generation passes QA, retry, persistence, "
-            "and delivery controls."
+            "Start advanced_image_wizard for provider/model selection, model-specific prompt "
+            "guidance, user confirmation, generation, QA, and delivery controls. Use "
+            "advanced_image_generate only for an already-confirmed execution request."
         ),
     }
 
 
-def build_handler(ctx):
+def build_handler(ctx, provider_manager=None):
     async def _handler(args: dict, **kwargs: Any) -> str:
-        return await orchestrate(ctx, args, task_id=str(kwargs.get("task_id") or ""))
+        return await orchestrate(
+            ctx,
+            args,
+            task_id=str(kwargs.get("task_id") or ""),
+            provider_manager=provider_manager,
+        )
 
     return _handler
 
@@ -186,7 +201,11 @@ def _inspect_image(data: bytes, qa_profile: str) -> dict[str, Any]:
             if qa_profile == "transparent":
                 rgba = image.convert("RGBA")
                 alpha = rgba.getchannel("A")
-                values = list(alpha.getdata())
+                values = list(
+                    alpha.get_flattened_data()
+                    if hasattr(alpha, "get_flattened_data")
+                    else alpha.getdata()
+                )
                 transparent_fraction = sum(a < 16 for a in values) / max(1, len(values))
                 corners = [
                     rgba.getpixel((0, 0))[3],
@@ -398,7 +417,7 @@ def _persist(data: bytes, path: Path) -> None:
     os.replace(temp, path)
 
 
-async def orchestrate(ctx, args: dict, task_id: str = "") -> str:
+async def orchestrate(ctx, args: dict, task_id: str = "", provider_manager=None) -> str:
     """Run the bounded delivery state machine and return a compact manifest."""
     prompt = str(args.get("prompt") or "").strip()
     if not prompt:
@@ -425,6 +444,8 @@ async def orchestrate(ctx, args: dict, task_id: str = "") -> str:
     destination = str(args.get("destination") or "")
     overwrite = bool(args.get("overwrite", False))
     require_human = bool(args.get("require_human_approval", False))
+    selected_provider = str(args.get("provider") or "hermes-native")
+    selected_model = str(args.get("model") or ("active" if selected_provider == "hermes-native" else ""))
     items: list[dict[str, Any]] = []
 
     for variant in range(1, variants + 1):
@@ -445,15 +466,26 @@ async def orchestrate(ctx, args: dict, task_id: str = "") -> str:
             if args.get("reference_image_urls"):
                 generation_args["reference_image_urls"] = args["reference_image_urls"]
             try:
-                raw = await asyncio.to_thread(
-                    ctx.dispatch_tool,
-                    "image_generate",
-                    generation_args,
-                    task_id=task_id,
-                )
-                last_generation = _parse_result(raw)
+                generation_args["provider"] = selected_provider
+                if selected_model:
+                    generation_args["model"] = selected_model
+                if args.get("wizard_id"):
+                    generation_args["idempotency_key"] = f"{args['wizard_id']}-{variant}-{attempt}"
+                if provider_manager is not None:
+                    last_generation = await provider_manager.generate(generation_args, task_id=task_id)
+                else:
+                    raw = await asyncio.to_thread(
+                        ctx.dispatch_tool,
+                        "image_generate",
+                        generation_args,
+                        task_id=task_id,
+                    )
+                    last_generation = _parse_result(raw)
             except Exception as exc:  # noqa: BLE001 - report provider failures in manifest
-                last_generation = {"success": False, "error": str(exc)}
+                if hasattr(exc, "to_dict"):
+                    last_generation = exc.to_dict()
+                else:
+                    last_generation = {"success": False, "error": str(exc)}
 
             source = last_generation.get("image") or last_generation.get("image_url") or last_generation.get("url")
             if not source or last_generation.get("success") is False:
@@ -557,6 +589,9 @@ async def orchestrate(ctx, args: dict, task_id: str = "") -> str:
                 "final_prompt": current_prompt,
                 "provider": last_generation.get("provider"),
                 "model": last_generation.get("model"),
+                "upstream_provider": last_generation.get("upstream_provider"),
+                "upstream_model": last_generation.get("upstream_model"),
+                "request_id": last_generation.get("request_id"),
                 "modality": last_generation.get("modality"),
                 "aspect_ratio": last_generation.get("aspect_ratio", aspect_ratio),
                 "qa": last_qa or None,
@@ -575,8 +610,11 @@ async def orchestrate(ctx, args: dict, task_id: str = "") -> str:
     manifest = {
         "success": overall in {"accepted", "needs_review"},
         "status": overall,
-        "orchestrator": "advanced-imagegen/0.2.0",
+        "orchestrator": "advanced-imagegen/0.3.0",
         "job_id": job_id,
+        "wizard_id": args.get("wizard_id") or None,
+        "provider": selected_provider,
+        "model": selected_model or None,
         "qa_profile": qa_profile,
         "variants": variants,
         "max_iterations": max_iterations,

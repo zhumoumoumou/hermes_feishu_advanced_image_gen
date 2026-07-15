@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generic Image Prompt"
+  short_description: "Build a production-ready image prompt"
+  default_prompt: "Use $prompt-generic-image to turn my image idea into a confirmed production prompt."

@@ -1,9 +1,11 @@
 name: advanced-imagegen
-version: 0.2.0
-description: "Controlled image generation with automated QA, bounded retries, persistence, and delivery gates."
-author: "Hermes User"
+version: 0.3.0
+description: "Multi-provider image generation with model prompt skills, guided confirmation, rate controls, QA, and delivery gates."
+author: "zhumoumoumou"
 kind: standalone
 provides_tools:
+  - advanced_image_wizard
+  - advanced_image_catalog
   - advanced_image_generate
 provides_hooks:
   - pre_tool_call

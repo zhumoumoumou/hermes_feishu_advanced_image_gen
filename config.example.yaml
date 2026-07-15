@@ -1,0 +1,102 @@
+# Copy this file to the active profile's advanced-imagegen.yaml.
+# Keep credentials in environment variables; never put API keys in this file.
+version: 1
+
+defaults:
+  provider: hermes-native
+  model: active
+
+providers:
+  # Fully operational without additional adapter configuration. It delegates
+  # to the provider/model currently selected by `hermes tools`.
+  hermes-native:
+    enabled: true
+
+  # Transport templates only. Replace endpoint, upstream_model, and response
+  # mappings with values from the supplier's current official API contract.
+  atlascloud:
+    display_name: AtlasCloud
+    adapter: http-json
+    enabled: false
+    api:
+      endpoint: https://REPLACE_WITH_ATLASCLOUD_ENDPOINT/v1/images/generations
+      api_key_env: ATLASCLOUD_API_KEY
+      auth_header: Authorization
+      auth_scheme: Bearer
+      request_timeout_seconds: 60
+      request:
+        model_field: model
+        prompt_field: prompt
+        aspect_ratio_field: aspect_ratio
+        image_url_field: image_url
+        reference_images_field: reference_image_urls
+        input_image_mode: passthrough
+      response:
+        image_path: data.0.url
+        request_id_path: request_id
+        error_path: error.message
+    limits:
+      qps: 1
+      tpm: 60000
+      max_concurrency: 2
+      max_wait_seconds: 30
+      retry:
+        max_attempts: 3
+        base_delay_seconds: 1
+        max_delay_seconds: 10
+    models:
+      seedream-5-pro:
+        display_name: Seedream 5.0 Pro (AtlasCloud)
+        family: seedream-5-pro
+        upstream_model: REPLACE_WITH_ATLASCLOUD_MODEL_ID
+        prompt_skill: prompt-seedream-5-pro
+        modalities: [text, image, reference]
+        max_reference_images: 8
+
+  bytedance:
+    display_name: ByteDance
+    adapter: http-json
+    enabled: false
+    api:
+      endpoint: https://REPLACE_WITH_BYTEDANCE_ENDPOINT/v1/image/tasks
+      api_key_env: BYTEDANCE_IMAGE_API_KEY
+      auth_header: Authorization
+      auth_scheme: Bearer
+      request_timeout_seconds: 60
+      request:
+        model_field: model
+        prompt_field: prompt
+        aspect_ratio_field: aspect_ratio
+        image_url_field: image_url
+        reference_images_field: reference_image_urls
+        input_image_mode: passthrough
+      async:
+        job_id_path: id
+        poll_endpoint: https://REPLACE_WITH_BYTEDANCE_ENDPOINT/v1/image/tasks/{job_id}
+        status_path: status
+        success_values: [succeeded, completed]
+        failure_values: [failed, cancelled]
+        error_path: error.message
+        poll_interval_seconds: 2
+        timeout_seconds: 180
+      response:
+        image_path: output.images.0.url
+        request_id_path: request_id
+        error_path: error.message
+    limits:
+      qps: 1
+      tpm: 60000
+      max_concurrency: 2
+      max_wait_seconds: 30
+      retry:
+        max_attempts: 3
+        base_delay_seconds: 1
+        max_delay_seconds: 10
+    models:
+      seedream-5-pro:
+        display_name: Seedream 5.0 Pro (ByteDance)
+        family: seedream-5-pro
+        upstream_model: REPLACE_WITH_BYTEDANCE_MODEL_ID
+        prompt_skill: prompt-seedream-5-pro
+        modalities: [text, image, reference]
+        max_reference_images: 8

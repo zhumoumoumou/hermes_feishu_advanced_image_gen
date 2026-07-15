@@ -88,17 +88,341 @@ def test_registers_skill_tool_and_bypass_gate():
     ctx = FakeContext()
     plugin.register(ctx)
 
-    assert ctx.skill_calls[0][0][0] == "studio"
-    assert ctx.skill_calls[0][0][1] == PLUGIN_DIR / "skills" / "studio" / "SKILL.md"
-    assert ctx.tool_calls[0]["name"] == "advanced_image_generate"
-    assert ctx.tool_calls[0]["toolset"] == "image_gen"
-    assert ctx.tool_calls[0]["is_async"] is True
+    skills = {call[0][0]: call[0][1] for call in ctx.skill_calls}
+    assert set(skills) == {"studio", "prompt-generic-image", "prompt-seedream-5-pro"}
+    assert skills["studio"] == PLUGIN_DIR / "skills" / "studio" / "SKILL.md"
+    tools = {call["name"]: call for call in ctx.tool_calls}
+    assert set(tools) == {
+        "advanced_image_wizard",
+        "advanced_image_catalog",
+        "advanced_image_generate",
+    }
+    assert all(call["toolset"] == "image_gen" for call in tools.values())
+    assert all(call["is_async"] is True for call in tools.values())
     assert ctx.hook_calls[0][0][0] == "pre_tool_call"
 
     assert plugin.block_raw_image_generate("advanced_image_generate") is None
     blocked = plugin.block_raw_image_generate("image_generate")
     assert blocked and blocked["action"] == "block"
     assert "advanced_image_generate" in blocked["message"]
+
+
+def external_catalog_yaml(*, async_api: bool = False, tpm: int = 60000) -> str:
+    async_block = """
+      async:
+        job_id_path: id
+        poll_endpoint: https://supplier.test/tasks/{job_id}
+        status_path: status
+        success_values: [completed]
+        failure_values: [failed]
+        poll_interval_seconds: 0.2
+        timeout_seconds: 2
+""" if async_api else ""
+    image_path = "output.url" if async_api else "data.0.url"
+    return f"""version: 1
+defaults:
+  provider: atlascloud
+  model: seedream-5-pro
+providers:
+  atlascloud:
+    display_name: AtlasCloud
+    adapter: http-json
+    enabled: true
+    api:
+      endpoint: https://supplier.test/generate
+      api_key_env: TEST_IMAGE_API_KEY
+      request:
+        model_field: model
+        prompt_field: prompt
+        aspect_ratio_field: aspect
+{async_block}      response:
+        image_path: {image_path}
+        request_id_path: request_id
+    limits:
+      qps: 1000
+      tpm: {tpm}
+      max_concurrency: 2
+      max_wait_seconds: 1
+      retry:
+        max_attempts: 2
+        base_delay_seconds: 0
+        max_delay_seconds: 0.1
+    models:
+      seedream-5-pro:
+        display_name: Seedream 5 Pro
+        family: seedream-5-pro
+        upstream_model: seedream-upstream
+        prompt_skill: prompt-seedream-5-pro
+        modalities: [text, image, reference]
+        max_reference_images: 4
+  bytedance:
+    display_name: ByteDance
+    adapter: http-json
+    enabled: false
+    api:
+      endpoint: https://disabled.test/generate
+    models:
+      seedream-5-pro:
+        family: seedream-5-pro
+        upstream_model: seedream-other-upstream
+        prompt_skill: prompt-seedream-5-pro
+        modalities: [text, image, reference]
+        max_reference_images: 4
+"""
+
+
+def runtime_modules(plugin_name: str):
+    plugin = load_plugin(plugin_name)
+    prefix = plugin.__name__
+    return (
+        plugin,
+        sys.modules[f"{prefix}.runtime.catalog"],
+        sys.modules[f"{prefix}.runtime.providers"],
+        sys.modules[f"{prefix}.runtime.wizard"],
+    )
+
+
+def test_catalog_keeps_model_skill_provider_neutral(tmp_path, monkeypatch):
+    _plugin, catalog_mod, _providers_mod, _wizard_mod = runtime_modules("advanced_imagegen_catalog")
+    config = tmp_path / "advanced-imagegen.yaml"
+    config.write_text(external_catalog_yaml(), encoding="utf-8")
+    monkeypatch.setenv("TEST_IMAGE_API_KEY", "secret-for-test")
+    catalog = catalog_mod.Catalog(PLUGIN_DIR, config)
+
+    atlas = catalog.providers["atlascloud"].models["seedream-5-pro"]
+    bytedance = catalog.providers["bytedance"].models["seedream-5-pro"]
+    assert atlas.family == bytedance.family == "seedream-5-pro"
+    assert atlas.prompt_skill == bytedance.prompt_skill == "prompt-seedream-5-pro"
+    public = catalog.public_catalog(include_disabled=True)
+    assert public["defaults"] == {"provider": "atlascloud", "model": "seedream-5-pro"}
+    assert next(p for p in public["providers"] if p["id"] == "atlascloud")["configured"] is True
+
+
+def test_invalid_enabled_placeholder_falls_back_to_native(tmp_path):
+    _plugin, catalog_mod, _providers_mod, _wizard_mod = runtime_modules("advanced_imagegen_bad_catalog")
+    config = tmp_path / "advanced-imagegen.yaml"
+    config.write_text(
+        external_catalog_yaml().replace("https://supplier.test/generate", "https://REPLACE_WITH_ENDPOINT/generate"),
+        encoding="utf-8",
+    )
+    catalog = catalog_mod.Catalog(PLUGIN_DIR, config)
+    assert "hermes-native" in catalog.providers
+    assert "atlascloud" not in catalog.providers
+    assert any("placeholder endpoint" in error for error in catalog.errors)
+
+
+def test_http_json_provider_maps_request_and_response(tmp_path, monkeypatch):
+    _plugin, catalog_mod, providers_mod, _wizard_mod = runtime_modules("advanced_imagegen_http")
+    import httpx
+
+    config = tmp_path / "advanced-imagegen.yaml"
+    config.write_text(external_catalog_yaml(), encoding="utf-8")
+    monkeypatch.setenv("TEST_IMAGE_API_KEY", "secret-for-test")
+    seen = {}
+
+    def handler(request):
+        seen["auth"] = request.headers.get("authorization")
+        seen["idempotency"] = request.headers.get("idempotency-key")
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"data": [{"url": "https://images.test/result.png"}], "request_id": "req-1"})
+
+    catalog = catalog_mod.Catalog(PLUGIN_DIR, config)
+    adapter = providers_mod.HttpJsonAdapter(transport=httpx.MockTransport(handler))
+    manager = providers_mod.ProviderManager(FakeContext(), catalog, {"http-json": adapter})
+    result = asyncio.run(
+        manager.generate(
+            {
+                "provider": "atlascloud",
+                "model": "seedream-5-pro",
+                "prompt": "A precise product image",
+                "aspect_ratio": "landscape",
+                "idempotency_key": "stable-key",
+            }
+        )
+    )
+    assert result["image"] == "https://images.test/result.png"
+    assert result["provider"] == "atlascloud"
+    assert result["model"] == "seedream-5-pro"
+    assert result["upstream_model"] == "seedream-upstream"
+    assert seen["auth"] == "Bearer secret-for-test"
+    assert seen["idempotency"] == "stable-key"
+    assert seen["body"] == {
+        "model": "seedream-upstream",
+        "prompt": "A precise product image",
+        "aspect": "landscape",
+    }
+
+
+def test_http_json_async_polling(tmp_path, monkeypatch):
+    _plugin, catalog_mod, providers_mod, _wizard_mod = runtime_modules("advanced_imagegen_async")
+    import httpx
+
+    config = tmp_path / "advanced-imagegen.yaml"
+    config.write_text(external_catalog_yaml(async_api=True), encoding="utf-8")
+    monkeypatch.setenv("TEST_IMAGE_API_KEY", "secret-for-test")
+    methods = []
+
+    def handler(request):
+        methods.append(request.method)
+        if request.method == "POST":
+            return httpx.Response(202, json={"id": "job-7"})
+        return httpx.Response(200, json={"status": "completed", "output": {"url": "https://images.test/async.png"}})
+
+    catalog = catalog_mod.Catalog(PLUGIN_DIR, config)
+    manager = providers_mod.ProviderManager(
+        FakeContext(),
+        catalog,
+        {"http-json": providers_mod.HttpJsonAdapter(transport=httpx.MockTransport(handler))},
+    )
+    result = asyncio.run(
+        manager.generate({"provider": "atlascloud", "model": "seedream-5-pro", "prompt": "Async image"})
+    )
+    assert result["image"] == "https://images.test/async.png"
+    assert methods == ["POST", "GET"]
+
+
+def test_http_429_is_retried_and_normalized(tmp_path, monkeypatch):
+    _plugin, catalog_mod, providers_mod, _wizard_mod = runtime_modules("advanced_imagegen_retry_429")
+    import httpx
+
+    config = tmp_path / "advanced-imagegen.yaml"
+    config.write_text(external_catalog_yaml(), encoding="utf-8")
+    monkeypatch.setenv("TEST_IMAGE_API_KEY", "secret-for-test")
+    calls = 0
+
+    def handler(_request):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(429, headers={"Retry-After": "0"}, json={"error": {"message": "slow down", "code": "quota"}})
+        return httpx.Response(200, json={"data": [{"url": "https://images.test/retried.png"}]})
+
+    manager = providers_mod.ProviderManager(
+        FakeContext(),
+        catalog_mod.Catalog(PLUGIN_DIR, config),
+        {"http-json": providers_mod.HttpJsonAdapter(transport=httpx.MockTransport(handler))},
+    )
+    result = asyncio.run(
+        manager.generate({"provider": "atlascloud", "model": "seedream-5-pro", "prompt": "Retry image"})
+    )
+    assert calls == 2
+    assert result["attempt"] == 2
+
+
+def test_http_auth_error_is_not_retried(tmp_path, monkeypatch):
+    _plugin, catalog_mod, providers_mod, _wizard_mod = runtime_modules("advanced_imagegen_auth_error")
+    import httpx
+
+    config = tmp_path / "advanced-imagegen.yaml"
+    config.write_text(external_catalog_yaml(), encoding="utf-8")
+    monkeypatch.setenv("TEST_IMAGE_API_KEY", "bad-test-key")
+    calls = 0
+
+    def handler(_request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(401, text="invalid credential")
+
+    manager = providers_mod.ProviderManager(
+        FakeContext(),
+        catalog_mod.Catalog(PLUGIN_DIR, config),
+        {"http-json": providers_mod.HttpJsonAdapter(transport=httpx.MockTransport(handler))},
+    )
+    with pytest.raises(providers_mod.GenerationError) as exc_info:
+        asyncio.run(
+            manager.generate({"provider": "atlascloud", "model": "seedream-5-pro", "prompt": "Auth image"})
+        )
+    assert calls == 1
+    assert exc_info.value.code == "authentication_failed"
+    assert exc_info.value.category == "authentication"
+    assert exc_info.value.retryable is False
+
+
+def test_local_tpm_admission_fails_before_api(tmp_path, monkeypatch):
+    _plugin, catalog_mod, providers_mod, _wizard_mod = runtime_modules("advanced_imagegen_tpm")
+    import httpx
+
+    config = tmp_path / "advanced-imagegen.yaml"
+    config.write_text(external_catalog_yaml(tpm=1), encoding="utf-8")
+    monkeypatch.setenv("TEST_IMAGE_API_KEY", "secret-for-test")
+    calls = 0
+
+    def handler(_request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, json={"data": [{"url": "https://images.test/never.png"}]})
+
+    manager = providers_mod.ProviderManager(
+        FakeContext(),
+        catalog_mod.Catalog(PLUGIN_DIR, config),
+        {"http-json": providers_mod.HttpJsonAdapter(transport=httpx.MockTransport(handler))},
+    )
+    with pytest.raises(providers_mod.GenerationError) as exc_info:
+        asyncio.run(
+            manager.generate(
+                {"provider": "atlascloud", "model": "seedream-5-pro", "prompt": "This prompt is longer than one token"}
+            )
+        )
+    assert exc_info.value.code == "local_rate_limit"
+    assert calls == 0
+
+
+def test_wizard_requires_confirmation_before_execution(tmp_path):
+    _plugin, catalog_mod, _providers_mod, wizard_mod = runtime_modules("advanced_imagegen_wizard")
+    catalog = catalog_mod.Catalog(PLUGIN_DIR, tmp_path / "missing.yaml")
+    calls = []
+
+    async def execute(args, task_id):
+        calls.append((args, task_id))
+        return json.dumps({"success": True, "status": "accepted", "items": []})
+
+    service = wizard_mod.WizardService(
+        catalog,
+        execute,
+        store=wizard_mod.WizardStore(tmp_path / "wizard-state"),
+    )
+    started = json.loads(asyncio.run(service.handle({"action": "start", "user_request": "Create a hero"})))
+    wizard_id = started["wizard_id"]
+    selected = json.loads(
+        asyncio.run(
+            service.handle(
+                {"action": "select", "wizard_id": wizard_id, "provider": "hermes-native", "model": "active"}
+            )
+        )
+    )
+    assert selected["selection"]["prompt_skill"] == "advanced-imagegen:prompt-generic-image"
+    drafted = json.loads(
+        asyncio.run(
+            service.handle(
+                {
+                    "action": "draft",
+                    "wizard_id": wizard_id,
+                    "prompt": "A confirmed hero image",
+                    "aspect_ratio": "landscape",
+                    "qa_profile": "strict",
+                }
+            )
+        )
+    )
+    assert drafted["status"] == "awaiting_confirmation"
+    assert calls == []
+    refused = json.loads(
+        asyncio.run(service.handle({"action": "confirm", "wizard_id": wizard_id, "confirmed": False}))
+    )
+    assert refused["error_code"] == "confirmation_required"
+    assert calls == []
+    completed = json.loads(
+        asyncio.run(
+            service.handle(
+                {"action": "confirm", "wizard_id": wizard_id, "confirmed": True},
+                task_id="task-1",
+            )
+        )
+    )
+    assert completed["wizard_status"] == "completed"
+    assert len(calls) == 1
+    assert calls[0][0]["provider"] == "hermes-native"
+    assert calls[0][0]["wizard_id"] == wizard_id
 
 
 def test_acceptance_persists_and_returns_manifest(tmp_path, monkeypatch):

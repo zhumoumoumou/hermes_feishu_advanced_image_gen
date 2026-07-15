@@ -25,7 +25,11 @@ def inspect(path: Path) -> dict:
         }
         if "A" in image.getbands():
             alpha = image.getchannel("A")
-            values = list(alpha.getdata())
+            values = list(
+                alpha.get_flattened_data()
+                if hasattr(alpha, "get_flattened_data")
+                else alpha.getdata()
+            )
             total = len(values)
             corners = [
                 alpha.getpixel((0, 0)),
